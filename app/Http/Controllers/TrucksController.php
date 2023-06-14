@@ -10,7 +10,7 @@ class TrucksController extends Controller
 {
     public function index()
     {
-        $trucks = Truck::all();
+        $trucks = Truck::orderBy('created_at', 'desc')->paginate(10);
         return view('home', compact('trucks'));
     }
 
@@ -26,7 +26,7 @@ class TrucksController extends Controller
         );
 
         if ($request->year < 1900 || $request->year > date("Y") + 5 || $validator->fails()) {
-            return "invalid";
+            return 'Form validation error.';
         }
         return 'valid';
     }
@@ -42,21 +42,24 @@ class TrucksController extends Controller
             $Truck->save();
             return redirect()->back()->with('success', 'Truck added successfully.');
         }
-        return redirect()->back()->with('error', 'Truck could not be added.');
+        return redirect()->back()->with('error', 'Truck could not be added. ' . $formErrors);
     }
     public function update(Request $request)
     {
+        $request->merge(['new_unit_number' => $request->unit_number]);
+        $request->request->remove('unit_number');
+
         $formErrors = $this->validateTruckData($request);
         if ($formErrors == 'valid') {
-            // dd($request);
-            $truck = Truck::findOrFail($request->truck_id);
+            $truck = Truck::findOrFail($request->og_unit_number);
             $truck->update([
+                'unit_number' => $request->new_unit_number,
                 'year' => $request->year,
                 'notes' => $request->notes,
             ]);
             return redirect()->back()->with('success', 'Truck successfully updated.');
         }
-        return redirect()->back()->with('error', 'Truck could not be updated.');
+        return redirect()->back()->with('error', 'Truck could not be updated. ' . $formErrors);
     }
     public function destroy($id)
     {
